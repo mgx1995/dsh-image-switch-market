@@ -1,0 +1,77 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Local plugins",
+    "zh": "本地插件"
+  },
+  "description": {
+    "en": "Plugins built and published from this machine.",
+    "zh": "在这台机器上构建并发布的插件。"
+  },
+  "metadata": {
+    "categories": {
+      "image": {
+        "title": {
+          "en": "Image",
+          "zh": "图片"
+        }
+      }
+    },
+    "labels": {},
+    "sortKeys": {
+      "builtin": {
+        "title": {
+          "en": "Built-in backends",
+          "zh": "内置后端"
+        },
+        "order": "desc"
+      }
+    }
+  },
+  "plugins": [
+    {
+      "name": "dsh-image-switch",
+      "title": {
+        "en": "Image Switch",
+        "zh": "生图路由"
+      },
+      "description": {
+        "en": "Choose which backend generate_image talks to, and keep a key per backend. Ships with local Stable Diffusion (127.0.0.1:1235), Volcengine Ark / Doubao Seedream, AutoDL.Art and any OpenAI-compatible /images/generations service; add, edit or remove backends yourself. Open Settings → Image routing (right after Models) and press \"Set default\" on a backend — that choice is pushed into dsh-model-think-level, so later generate_image calls need no model argument. \"Test\" spends one real generation on the selected backend (local is free, cloud calls are billed by that provider). Keys are stored in ~/.dsh/image-switch/keys.json (mode 600) and never written into the profile config; when no key is saved the plugin falls back to the backend's env var or the ~/.dsh/.credentials.yaml refs. Turning the bundle off removes the Settings page and the image_router tool, and the standalone endpoint on port 1236 stops listening, so generate_image falls back to whatever provider rows the profile still declares.",
+        "zh": "决定 generate_image 走哪个后端，并给每个后端单独存密钥。内置本地 Stable Diffusion（127.0.0.1:1235）、火山方舟豆包 Seedream、AutoDL.Art，以及任意 OpenAI 兼容的 /images/generations 服务；后端可以自己加、改、删。打开「设置 → 生图路由」（紧跟在「模型」后面），在某个后端上点「设为默认」——这个选择会同步写进 dsh-model-think-level，之后调用 generate_image 不用再写 model。「测试」会在该后端上真跑一张（本地免费，云端按各家计费）。密钥存在 ~/.dsh/image-switch/keys.json（权限 600），不写进 profile 配置；没存密钥时依次回退到后端的密钥变量名和 ~/.dsh/.credentials.yaml 的 refs。关掉这个 bundle 会移除设置页和 image_router 工具，1236 上的独立端点也会停止监听，generate_image 回到 profile 里仍然声明的那些 provider 行。"
+      },
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNiIgaGVpZ2h0PSIzNiIgdmlld0JveD0iMCAwIDM2IDM2IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkltYWdlIHN3aXRjaCI+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjQ3YmJmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cmVjdCB4PSI1IiB5PSI4IiB3aWR0aD0iMTciIGhlaWdodD0iMTUiIHJ4PSIzLjIiLz4KICAgIDxjaXJjbGUgY3g9IjEwLjIiIGN5PSIxMi44IiByPSIxLjUiLz4KICAgIDxwYXRoIGQ9Ik01LjggMjAuNmw0LjktNC45IDMuMSAzLjEgMS45LTEuOSA0LjUgNC41Ii8+CiAgPC9nPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI0N2JiZiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPHBhdGggZD0iTTI0LjYgMTIuN2g2LjYiLz4KICAgIDxwYXRoIGQ9Ik0yOC43IDEwLjJsMi41IDIuNS0yLjUgMi41Ii8+CiAgICA8cGF0aCBkPSJNMzEuMiAyMy4zaC02LjYiLz4KICAgIDxwYXRoIGQ9Ik0yNy4xIDIwLjhsLTIuNSAyLjUgMi41IDIuNSIvPgogIDwvZz4KPC9zdmc+Cg==",
+      "author": "dsh-image-switch contributors",
+      "metadata": {
+        "category": "image",
+        "keywords": [
+          "deepseek-harness",
+          "dsh",
+          "dsh-plugin",
+          "image-generation",
+          "text-to-image",
+          "stable-diffusion",
+          "doubao",
+          "seedream",
+          "openai-compatible"
+        ],
+        "labels": [],
+        "sortKeys": {
+          "builtin": 6
+        }
+      },
+      "versions": [
+        {
+          "version": "1.0.0",
+          "publishTimestamp": 1795504143,
+          "source": {
+            "type": "npm",
+            "registry": "https://registry.npmjs.org"
+          },
+          "engines": {
+            "node": ">=20"
+          }
+        }
+      ]
+    }
+  ]
+}
