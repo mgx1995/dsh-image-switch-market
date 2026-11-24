@@ -62,12 +62,11 @@
       "versions": [
         {
           "version": "1.0.0",
-          "publishTimestamp": 1795506976,
+          "publishTimestamp": 1795507114,
           "source": {
             "type": "git",
             "url": "https://github.com/mgx1995/dsh-image-switch-market",
-            "commit": "a5ca000bcc6b64c6d7d13957d73b9786498775c7",
-            "path": "plugin"
+            "commit": "55076f8f7641a168ef6c76de6cff9e23d5e5e995"
           },
           "engines": {
             "node": ">=20"
@@ -75,8 +74,7 @@
         }
       ],
       "repository": {
-        "url": "https://github.com/mgx1995/dsh-image-switch-market",
-        "directory": "plugin"
+        "url": "https://github.com/mgx1995/dsh-image-switch-market"
       },
       "homepage": "https://mgx1995.github.io/dsh-image-switch-market/"
     }
