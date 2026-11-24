@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="300" viewBox="0 0 640 300">
+  <rect width="640" height="300" rx="20" fill="#f3f5f9"/>
+
+  <!-- 左：设置里的后端列表 -->
+  <rect x="56" y="46" width="300" height="208" rx="16" fill="#ffffff" stroke="#b7c3d2" stroke-width="2"/>
+
+  <!-- 第一行：被选中的后端 -->
+  <rect x="70" y="60" width="272" height="56" rx="12" fill="#e8f0fb"/>
+  <circle cx="96" cy="88" r="9" fill="none" stroke="#247bbf" stroke-width="2"/>
+  <circle cx="96" cy="88" r="4" fill="#247bbf"/>
+  <rect x="116" y="78" width="104" height="8" rx="4" fill="#c3d3e6"/>
+  <rect x="116" y="94" width="68" height="7" rx="3.5" fill="#dbe4ef"/>
+  <rect x="286" y="74" width="46" height="20" rx="10" fill="#247bbf"/>
+
+  <!-- 第二行 -->
+  <circle cx="96" cy="146" r="9" fill="none" stroke="#b7c3d2" stroke-width="2"/>
+  <rect x="116" y="137" width="118" height="8" rx="4" fill="#d6dde7"/>
+  <rect x="116" y="153" width="60" height="7" rx="3.5" fill="#e0e5ed"/>
+  <rect x="286" y="132" width="46" height="20" rx="10" fill="#e7edf5"/>
+
+  <!-- 第三行 -->
+  <circle cx="96" cy="204" r="9" fill="none" stroke="#b7c3d2" stroke-width="2"/>
+  <rect x="116" y="195" width="96" height="8" rx="4" fill="#d6dde7"/>
+  <rect x="116" y="211" width="74" height="7" rx="3.5" fill="#e0e5ed"/>
+  <rect x="286" y="190" width="46" height="20" rx="10" fill="#e7edf5"/>
+
+  <!-- 中：切换箭头 -->
+  <path d="M372 150h44" fill="none" stroke="#7b8b9f" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M406 143l9 7-9 7" fill="none" stroke="#7b8b9f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 右：出图结果 -->
+  <rect x="430" y="62" width="156" height="176" rx="14" fill="#ffffff" stroke="#b7c3d2" stroke-width="2"/>
+  <circle cx="466" cy="98" r="11" fill="#e7edf5"/>
+  <path d="M445 218l38-48 26 30 18-22 20 40z" fill="#c3d3e6"/>
+  <path d="M445 218l38-48 26 30 18-22 20 40z" fill="none" stroke="#9fb0c4" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- 右下角：本地与云端两个来源 -->
+  <circle cx="500" cy="258" r="8" fill="#247bbf" opacity=".85"/>
+  <circle cx="524" cy="258" r="8" fill="#7b8b9f" opacity=".45"/>
+</svg>

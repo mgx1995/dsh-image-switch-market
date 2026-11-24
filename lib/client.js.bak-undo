@@ -1,0 +1,977 @@
+/**
+ * dsh-image-switch —— 设置页 UI（Client 半侧）
+ *
+ * 一个设置分区：列出全部生图后端、切默认、填密钥、测连通、增删。
+ *
+ * 这里刻意不 `require` 任何 Harness Client 包（控件自己写），只吃
+ * `--dsw-alias-*` 主题 token，所以明暗两套主题都自动对。
+ *
+ * @module lib/client.js
+ */
+
+window.__ModuleLoader__.load({
+  id: 'dsh-image-switch',
+  factory(require) {
+    const React = require('react')
+    const h = React.createElement
+    const { useCallback, useEffect, useMemo, useRef, useState } = React
+
+    /* ---------------------------------------------------------------- *
+     * 常量
+     * ---------------------------------------------------------------- */
+
+    const API = '/api/image-switch'
+    const PANEL_ID = 'image-switch'
+    const PREFIX = 'ir-'
+
+    const zh = {
+      nav: '生图路由',
+      title: '生图路由',
+      subtitle: '选 generate_image 走哪个后端 —— 本地 SD、豆包、AutoDL 都在这里切。',
+      current: '当前默认',
+      endpoint: '独立端点',
+      refresh: '刷新',
+      loading: '正在读取…',
+      loadFailed: '读取失败',
+      retry: '重试',
+      active: '默认',
+      makeDefault: '设为默认',
+      test: '测试',
+      testing: '测试中…',
+      edit: '编辑',
+      save: '保存',
+      cancel: '取消',
+      remove: '删除',
+      removeConfirm: '确定删除这个后端？',
+      confirmRemove: '确认删除',
+      keySet: '密钥已配置',
+      keyMissing: '密钥未配置',
+      keyFromPanel: '面板填写',
+      keyFromEnv: '来自环境变量或凭证库',
+      keyPlaceholder: '粘贴 API Key（留空则清除）',
+      keySave: '保存密钥',
+      addBackend: '新增后端',
+      addHint: '任何 OpenAI 兼容的 /images/generations 服务都能加进来。',
+      name: '后端名',
+      nameHint: '字母、数字、下划线、连字符',
+      label: '显示名',
+      kind: '协议',
+      kindOpenai: 'OpenAI 兼容',
+      kindArk: '火山方舟',
+      baseURL: 'Base URL',
+      baseURLHint: '例如 https://api.example.com/v1',
+      model: '模型 ID',
+      apiKeyEnv: '密钥变量名',
+      apiKeyEnvHint: '可选，如 ARK_API_KEY',
+      authPrefix: '鉴权前缀',
+      authPrefixHint: '默认 Bearer ，留空表示裸 token',
+      stripQuality: '不发送 quality',
+      watermark: '带水印',
+      testOk: '可用',
+      testFail: '失败',
+      images: '张图',
+      empty: '还没有任何后端',
+      hintTitle: '怎么用',
+      hintBody:
+        '这里的「默认」会同步给 dsh-model-think-level，agent 调用 generate_image 时不用写 model 就走它。' +
+        '想临时换一个，直接对 agent 说「用 xxx 生图」即可，或在生成时指定 img-router/<后端名>。',
+      barePort:
+        '独立端点没在监听（可能端口 1236 被占），生图链路会失败；设置页本身仍然可用。',
+      saved: '已保存',
+      syncModels: '同步到模型页',
+      syncing: '同步中…',
+      syncOk: '已同步',
+      needFields: 'Base URL 和模型 ID 都是必填',
+      nameRequired: '先给后端起个名字（字母、数字、下划线、连字符）'
+    }
+
+    const en = {
+      nav: 'Image routing',
+      title: 'Image routing',
+      subtitle: 'Pick which backend generate_image uses — local SD, Doubao, AutoDL, all switchable here.',
+      current: 'Default',
+      endpoint: 'Standalone endpoint',
+      refresh: 'Refresh',
+      loading: 'Reading…',
+      loadFailed: 'Failed to load',
+      retry: 'Retry',
+      active: 'Default',
+      makeDefault: 'Set default',
+      test: 'Test',
+      testing: 'Testing…',
+      edit: 'Edit',
+      save: 'Save',
+      cancel: 'Cancel',
+      remove: 'Remove',
+      removeConfirm: 'Remove this backend?',
+      confirmRemove: 'Confirm remove',
+      keySet: 'Key configured',
+      keyMissing: 'No key',
+      keyFromPanel: 'from this panel',
+      keyFromEnv: 'from env or credential store',
+      keyPlaceholder: 'Paste API key (empty clears it)',
+      keySave: 'Save key',
+      addBackend: 'Add backend',
+      addHint: 'Any OpenAI-compatible /images/generations service works.',
+      name: 'Name',
+      nameHint: 'letters, digits, underscore, dash',
+      label: 'Label',
+      kind: 'Protocol',
+      kindOpenai: 'OpenAI compatible',
+      kindArk: 'Volcengine Ark',
+      baseURL: 'Base URL',
+      baseURLHint: 'e.g. https://api.example.com/v1',
+      model: 'Model ID',
+      apiKeyEnv: 'Key env name',
+      apiKeyEnvHint: 'optional, e.g. ARK_API_KEY',
+      authPrefix: 'Auth prefix',
+      authPrefixHint: 'default "Bearer ", empty means bare token',
+      stripQuality: "Don't send quality",
+      watermark: 'Watermark',
+      testOk: 'reachable',
+      testFail: 'failed',
+      images: 'images',
+      empty: 'No backends yet',
+      hintTitle: 'How it works',
+      hintBody:
+        'This default is synced into dsh-model-think-level, so generate_image uses it without an explicit model. ' +
+        'To use another one for a single call, just say "draw it with xxx" or pass img-router/<name>.',
+      barePort: 'The standalone endpoint is not listening (port 1236 busy?) — generation will fail, this page still works.',
+      saved: 'Saved',
+      syncModels: 'Sync to Models page',
+      syncing: 'Syncing…',
+      syncOk: 'Synced',
+      needFields: 'Base URL and model ID are required',
+      nameRequired: 'Give the backend a name first (letters, digits, underscore, dash)'
+    }
+
+    function pickDict() {
+      try {
+        const lang = (navigator.language || 'zh').toLowerCase()
+        return lang.startsWith('zh') ? zh : en
+      } catch {
+        return zh
+      }
+    }
+
+    /* ---------------------------------------------------------------- *
+     * 主题 token
+     * ---------------------------------------------------------------- */
+
+    const C = {
+      text: 'var(--dsw-alias-label-primary)',
+      secondary: 'var(--dsw-alias-label-secondary)',
+      caption: 'var(--dsw-alias-label-caption)',
+      border: 'var(--dsw-alias-border-l2)',
+      borderSoft: 'var(--dsw-alias-border-l1)',
+      panel: 'var(--dsw-alias-bg-layer-1)',
+      panelAlt: 'var(--dsw-alias-bg-layer-2)',
+      input: 'var(--dsw-specific-input-major)',
+      hover: 'var(--dsw-alias-interactive-bg-hover)',
+      accent: 'var(--dsw-alias-state-business-primary)',
+      accentFill: 'var(--dsw-alias-button-primary-fill)',
+      accentHover: 'var(--dsw-alias-button-primary-hover)',
+      onAccent: 'var(--dsw-alias-label-primary-inverted)',
+      ok: 'var(--dsw-alias-state-success-primary)',
+      err: 'var(--dsw-alias-state-error-primary)',
+      warn: 'var(--dsw-alias-state-warn-primary)',
+      radius: 'var(--dsw-radius-panel, 12px)'
+    }
+
+    /* ---------------------------------------------------------------- *
+     * 样式（一次性注入）
+     * ---------------------------------------------------------------- */
+
+    const STYLE_ID = PREFIX + 'styles'
+
+    function injectStyles() {
+      if (typeof document === 'undefined') return
+      if (document.getElementById(STYLE_ID)) return
+      const style = document.createElement('style')
+      style.id = STYLE_ID
+      style.textContent = `
+.${PREFIX}wrap { display: flex; flex-direction: column; gap: 16px; padding: 4px 2px 32px; font-size: 14px; }
+.${PREFIX}head { display: flex; flex-direction: column; gap: 6px; }
+.${PREFIX}h1 { font-size: 18px; font-weight: 600; margin: 0; }
+.${PREFIX}sub { font-size: 13px; line-height: 1.5; }
+.${PREFIX}bar { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; padding: 10px 14px; border-radius: ${C.radius}; border: 1px solid ${C.border}; }
+.${PREFIX}kv { display: flex; gap: 6px; align-items: baseline; font-size: 12px; }
+.${PREFIX}card { border: 1px solid ${C.border}; border-radius: ${C.radius}; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.${PREFIX}cardActive { border-color: ${C.accent}; }
+.${PREFIX}row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.${PREFIX}grow { flex: 1 1 auto; min-width: 0; }
+.${PREFIX}name { font-size: 14px; font-weight: 600; }
+.${PREFIX}mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-all; }
+.${PREFIX}badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid ${C.border}; line-height: 1.6; white-space: nowrap; }
+.${PREFIX}btn { font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 8px; border: 1px solid ${C.border}; background: transparent; color: ${C.text}; cursor: pointer; white-space: nowrap; }
+.${PREFIX}btn:hover { background: ${C.hover}; }
+.${PREFIX}btn:disabled { opacity: .45; cursor: default; }
+.${PREFIX}btnPrimary { background: ${C.accentFill}; border-color: transparent; color: ${C.onAccent}; }
+.${PREFIX}btnPrimary:hover { background: ${C.accentHover}; }
+.${PREFIX}btnDanger { color: ${C.err}; }
+.${PREFIX}input { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.input}; color: ${C.text}; min-width: 0; width: 100%; box-sizing: border-box; }
+.${PREFIX}input:focus { outline: none; border-color: ${C.accent}; }
+.${PREFIX}field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 220px; min-width: 0; }
+.${PREFIX}label { font-size: 12px; }
+.${PREFIX}note { font-size: 11px; }
+.${PREFIX}ok { color: ${C.ok}; font-size: 12px; }
+.${PREFIX}err { color: ${C.err}; font-size: 12px; word-break: break-word; }
+.${PREFIX}grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.${PREFIX}form { border: 1px dashed ${C.border}; border-radius: ${C.radius}; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.${PREFIX}hint { border: 1px solid ${C.borderSoft}; border-radius: ${C.radius}; padding: 12px 14px; font-size: 12px; line-height: 1.6; background: ${C.panelAlt}; }
+.${PREFIX}check { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+`
+      document.head.appendChild(style)
+    }
+
+    /* ---------------------------------------------------------------- *
+     * 网络
+     * ---------------------------------------------------------------- */
+
+    async function call(path, init) {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 180_000)
+      try {
+        const response = await fetch(API + path, {
+          ...init,
+          signal: controller.signal,
+          headers: init?.body ? { 'content-type': 'application/json' } : undefined
+        })
+        const payload = await response.json().catch(() => null)
+        if (!payload) throw new Error(`HTTP ${response.status}`)
+        if (payload.ok === false) throw new Error(payload.error || `HTTP ${response.status}`)
+        return payload.data
+      } finally {
+        clearTimeout(timer)
+      }
+    }
+
+    const post = (path, body) => call(path, { method: 'POST', body: JSON.stringify(body ?? {}) })
+
+    /* ---------------------------------------------------------------- *
+     * 小部件
+     * ---------------------------------------------------------------- */
+
+    function Btn({ children, onClick, primary, danger, disabled, title }) {
+      const cls = [PREFIX + 'btn']
+      if (primary) cls.push(PREFIX + 'btnPrimary')
+      if (danger) cls.push(PREFIX + 'btnDanger')
+      return h('button', { type: 'button', className: cls.join(' '), onClick, disabled, title }, children)
+    }
+
+    function Badge({ children, color, title }) {
+      return h(
+        'span',
+        { className: PREFIX + 'badge', style: color ? { color, borderColor: color } : undefined, title },
+        children
+      )
+    }
+
+    function Field({ label, hint, children }) {
+      return h(
+        'div',
+        { className: PREFIX + 'field' },
+        h('span', { className: PREFIX + 'label', style: { color: C.secondary } }, label),
+        children,
+        hint ? h('span', { className: PREFIX + 'note', style: { color: C.caption } }, hint) : null
+      )
+    }
+
+    function TextInput({ value, onChange, placeholder, disabled, mono }) {
+      return h('input', {
+        className: PREFIX + 'input' + (mono ? ' ' + PREFIX + 'mono' : ''),
+        type: 'text',
+        value: value ?? '',
+        placeholder,
+        disabled,
+        spellCheck: false,
+        onChange: (event) => onChange(event.target.value)
+      })
+    }
+
+    function SecretInput({ value, onChange, placeholder, disabled }) {
+      return h('input', {
+        className: PREFIX + 'input ' + PREFIX + 'mono',
+        type: 'password',
+        value: value ?? '',
+        placeholder,
+        disabled,
+        spellCheck: false,
+        autoComplete: 'off',
+        onChange: (event) => onChange(event.target.value)
+      })
+    }
+
+    /* ---------------------------------------------------------------- *
+     * 单个后端卡片
+     * ---------------------------------------------------------------- */
+
+    function BackendCard({ backend, dict, onChanged, onError }) {
+      const [keyDraft, setKeyDraft] = useState('')
+      const [keyOpen, setKeyOpen] = useState(false)
+      const [busy, setBusy] = useState('')
+      const [testResult, setTestResult] = useState(null)
+      const [editing, setEditing] = useState(false)
+      const [draft, setDraft] = useState(null)
+      // 二次确认：设置页跑在 webview 里，window.confirm 可能被宿主吞掉（返回 false → 点了毫无反应）
+      const [armed, setArmed] = useState(false)
+
+      // 二次确认后若一直不点，3.5s 自动复位，避免误触后停在「确认删除」
+      useEffect(() => {
+        if (!armed) return undefined
+        const timer = setTimeout(() => setArmed(false), 3500)
+        return () => clearTimeout(timer)
+      }, [armed])
+
+      const beginEdit = () => {
+        setDraft({
+          label: backend.label,
+          kind: backend.kind,
+          baseURL: backend.baseURL,
+          model: backend.model,
+          apiKeyEnv: backend.apiKeyEnv,
+          authPrefix: backend.authPrefix === undefined ? '' : backend.authPrefix,
+          stripQuality: backend.stripQuality,
+          watermark: backend.watermark
+        })
+        setEditing(true)
+      }
+
+      const run = async (tag, fn) => {
+        setBusy(tag)
+        try {
+          await fn()
+        } catch (error) {
+          onError(error instanceof Error ? error.message : String(error))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      return h(
+        'div',
+        { className: PREFIX + 'card' + (backend.isActive ? ' ' + PREFIX + 'cardActive' : '') },
+        h(
+          'div',
+          { className: PREFIX + 'row' },
+          h(
+            'div',
+            { className: PREFIX + 'grow' },
+            h(
+              'div',
+              { className: PREFIX + 'row' },
+              h('span', { className: PREFIX + 'name' }, backend.label),
+              backend.isActive
+                ? h(Badge, { color: C.accent }, dict.active)
+                : null,
+              h(Badge, null, backend.kind === 'ark' ? dict.kindArk : dict.kindOpenai)
+            ),
+            h(
+              'div',
+              { className: PREFIX + 'mono', style: { color: C.secondary, marginTop: 4 } },
+              `${backend.model} · ${backend.baseURL}`
+            )
+          ),
+          h(
+            'div',
+            { className: PREFIX + 'row' },
+            backend.isActive
+              ? null
+              : h(
+                  Btn,
+                  {
+                    primary: true,
+                    disabled: busy.length > 0,
+                    onClick: () => run('use', async () => {
+                      const next = await post('/default', { backend: backend.name })
+                      if (next?.dsh && next.dsh.ok === false) {
+                        onError(
+                          `已切换到 ${backend.label}，但没同步进 DSH 默认模型：${next.dsh.error ?? '未知原因'}` +
+                            `（generate_image 可能还在用旧后端）`
+                        )
+                      }
+                      await onChanged()
+                    })
+                  },
+                  dict.makeDefault
+                ),
+            h(
+              Btn,
+              {
+                disabled: busy.length > 0,
+                onClick: () =>
+                  run('test', async () => {
+                    setTestResult(null)
+                    const result = await post('/test', { backend: backend.name })
+                    setTestResult(result)
+                  })
+              },
+              busy === 'test' ? dict.testing : dict.test
+            ),
+            h(
+              Btn,
+              {
+                disabled: busy.length > 0,
+                onClick: () => {
+                  setKeyOpen((open) => !open)
+                  setKeyDraft('')
+                }
+              },
+              dict.keySave
+            ),
+            h(Btn, { disabled: busy.length > 0, onClick: beginEdit }, dict.edit),
+            h(
+              Btn,
+              {
+                danger: true,
+                disabled: busy.length > 0,
+                title: armed ? dict.confirmRemove : dict.remove,
+                onClick: () => {
+                  if (!armed) {
+                    setArmed(true)
+                    return
+                  }
+                  setArmed(false)
+                  run('remove', async () => {
+                    const next = await post('/remove', { backend: backend.name })
+                    const models = next?.models
+                    if (models && models.ok === false) {
+                      onError(`${dict.saved}，但 DSH 模型页没同步：${models.error ?? '未知原因'}`)
+                    }
+                    await onChanged()
+                  })
+                }
+              },
+              armed ? dict.confirmRemove : dict.remove
+            )
+          )
+        ),
+
+        // 密钥状态
+        h(
+          'div',
+          { className: PREFIX + 'row', style: { fontSize: 12 } },
+          h(
+            'span',
+            { style: { color: backend.hasKey ? C.ok : C.warn } },
+            backend.hasKey ? `${dict.keySet}：${backend.keyHint}` : dict.keyMissing
+          ),
+          backend.hasKey
+            ? h(
+                'span',
+                { style: { color: C.caption } },
+                backend.keyFromPanel ? `（${dict.keyFromPanel}）` : `（${dict.keyFromEnv}${backend.apiKeyEnv ? ' ' + backend.apiKeyEnv : ''}）`
+              )
+            : null
+        ),
+
+        keyOpen
+          ? h(
+              'div',
+              { className: PREFIX + 'row' },
+              h(
+                'div',
+                { className: PREFIX + 'grow' },
+                h(SecretInput, {
+                  value: keyDraft,
+                  onChange: setKeyDraft,
+                  placeholder: dict.keyPlaceholder,
+                  disabled: busy.length > 0
+                })
+              ),
+              h(
+                Btn,
+                {
+                  primary: true,
+                  disabled: busy.length > 0,
+                  onClick: () =>
+                    run('key', async () => {
+                      await post('/key', { backend: backend.name, key: keyDraft })
+                      setKeyDraft('')
+                      setKeyOpen(false)
+                      await onChanged()
+                    })
+                },
+                dict.save
+              ),
+              h(
+                Btn,
+                {
+                  disabled: busy.length > 0,
+                  onClick: () => {
+                    setKeyOpen(false)
+                    setKeyDraft('')
+                  }
+                },
+                dict.cancel
+              )
+            )
+          : null,
+
+        testResult
+          ? h(
+              'div',
+              { className: testResult.ok ? PREFIX + 'ok' : PREFIX + 'err' },
+              testResult.ok
+                ? `${dict.testOk} · ${testResult.ms}ms · ${testResult.images} ${dict.images}`
+                : `${dict.testFail} · ${testResult.error ?? ''}`
+            )
+          : null,
+
+        editing && draft
+          ? h(
+              'div',
+              { className: PREFIX + 'form' },
+              h(
+                'div',
+                { className: PREFIX + 'grid' },
+                h(Field, { label: dict.label }, h(TextInput, {
+                  value: draft.label,
+                  onChange: (value) => setDraft({ ...draft, label: value })
+                })),
+                h(Field, { label: dict.kind }, h('select', {
+                  className: PREFIX + 'input',
+                  value: draft.kind,
+                  onChange: (event) => setDraft({ ...draft, kind: event.target.value })
+                },
+                  h('option', { value: 'openai' }, dict.kindOpenai),
+                  h('option', { value: 'ark' }, dict.kindArk)
+                ))
+              ),
+              h(
+                'div',
+                { className: PREFIX + 'grid' },
+                h(Field, { label: dict.baseURL, hint: dict.baseURLHint }, h(TextInput, {
+                  mono: true,
+                  value: draft.baseURL,
+                  onChange: (value) => setDraft({ ...draft, baseURL: value })
+                })),
+                h(Field, { label: dict.model }, h(TextInput, {
+                  mono: true,
+                  value: draft.model,
+                  onChange: (value) => setDraft({ ...draft, model: value })
+                }))
+              ),
+              h(
+                'div',
+                { className: PREFIX + 'grid' },
+                h(Field, { label: dict.apiKeyEnv, hint: dict.apiKeyEnvHint }, h(TextInput, {
+                  mono: true,
+                  value: draft.apiKeyEnv,
+                  onChange: (value) => setDraft({ ...draft, apiKeyEnv: value })
+                })),
+                h(Field, { label: dict.authPrefix, hint: dict.authPrefixHint }, h(TextInput, {
+                  mono: true,
+                  value: draft.authPrefix,
+                  onChange: (value) => setDraft({ ...draft, authPrefix: value })
+                }))
+              ),
+              h(
+                'div',
+                { className: PREFIX + 'row' },
+                h(
+                  'label',
+                  { className: PREFIX + 'check' },
+                  h('input', {
+                    type: 'checkbox',
+                    checked: draft.stripQuality === true,
+                    onChange: (event) => setDraft({ ...draft, stripQuality: event.target.checked })
+                  }),
+                  dict.stripQuality
+                ),
+                h(
+                  'label',
+                  { className: PREFIX + 'check' },
+                  h('input', {
+                    type: 'checkbox',
+                    checked: draft.watermark === true,
+                    onChange: (event) => setDraft({ ...draft, watermark: event.target.checked })
+                  }),
+                  dict.watermark
+                )
+              ),
+              h(
+                'div',
+                { className: PREFIX + 'row' },
+                h(
+                  Btn,
+                  {
+                    primary: true,
+                    disabled: busy.length > 0,
+                    onClick: () =>
+                      run('save', async () => {
+                        if (!draft.baseURL.trim() || !draft.model.trim()) {
+                          onError(dict.needFields)
+                          return
+                        }
+                        const next = await post('/backend', {
+                          name: backend.name,
+                          spec: {
+                            label: draft.label || backend.name,
+                            kind: draft.kind,
+                            baseURL: draft.baseURL.trim(),
+                            model: draft.model.trim(),
+                            apiKeyEnv: draft.apiKeyEnv.trim(),
+                            authPrefix: draft.authPrefix,
+                            stripQuality: draft.stripQuality,
+                            watermark: draft.watermark
+                          }
+                        })
+                        const models = next?.models
+                        if (models && models.ok === false) {
+                          onError(`${dict.saved}，但 DSH 模型页没同步：${models.error ?? '未知原因'}`)
+                        }
+                        setEditing(false)
+                        await onChanged()
+                      })
+                  },
+                  dict.save
+                ),
+                h(Btn, { disabled: busy.length > 0, onClick: () => setEditing(false) }, dict.cancel)
+              )
+            )
+          : null
+      )
+    }
+
+    /* ---------------------------------------------------------------- *
+     * 新增后端
+     * ---------------------------------------------------------------- */
+
+    const BLANK = {
+      name: '',
+      label: '',
+      kind: 'openai',
+      baseURL: '',
+      model: '',
+      apiKeyEnv: '',
+      authPrefix: '',
+      stripQuality: false,
+      watermark: false,
+      key: ''
+    }
+
+    function AddBackend({ dict, onChanged, onError }) {
+      const [open, setOpen] = useState(false)
+      const [draft, setDraft] = useState(BLANK)
+      const [busy, setBusy] = useState(false)
+
+      const submit = async () => {
+        if (!draft.name.trim()) {
+          onError(dict.nameRequired)
+          return
+        }
+        if (!draft.baseURL.trim() || !draft.model.trim()) {
+          onError(dict.needFields)
+          return
+        }
+        setBusy(true)
+        try {
+          const next = await post('/backend', {
+            name: draft.name.trim(),
+            spec: {
+              label: draft.label.trim() || draft.name.trim(),
+              kind: draft.kind,
+              baseURL: draft.baseURL.trim(),
+              model: draft.model.trim(),
+              apiKeyEnv: draft.apiKeyEnv.trim(),
+              authPrefix: draft.authPrefix,
+              stripQuality: draft.stripQuality,
+              watermark: draft.watermark,
+              key: draft.key.trim() || undefined
+            }
+          })
+          const models = next?.models
+          if (models && models.ok === false) {
+            onError(`${dict.saved}，但 DSH 模型页没同步：${models.error ?? '未知原因'}`)
+          }
+          setDraft(BLANK)
+          setOpen(false)
+          await onChanged()
+        } catch (error) {
+          onError(error instanceof Error ? error.message : String(error))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      if (!open) {
+        return h(
+          'div',
+          { className: PREFIX + 'row' },
+          h(Btn, { onClick: () => setOpen(true) }, '＋ ' + dict.addBackend)
+        )
+      }
+
+      return h(
+        'div',
+        { className: PREFIX + 'form' },
+        h(
+          'div',
+          { className: PREFIX + 'grid' },
+          h(Field, { label: dict.name, hint: dict.nameHint }, h(TextInput, {
+            mono: true,
+            value: draft.name,
+            placeholder: 'my-backend',
+            onChange: (value) => setDraft({ ...draft, name: value })
+          })),
+          h(Field, { label: dict.label }, h(TextInput, {
+            value: draft.label,
+            placeholder: dict.label,
+            onChange: (value) => setDraft({ ...draft, label: value })
+          })),
+          h(Field, { label: dict.kind }, h('select', {
+            className: PREFIX + 'input',
+            value: draft.kind,
+            onChange: (event) => setDraft({ ...draft, kind: event.target.value })
+          },
+            h('option', { value: 'openai' }, dict.kindOpenai),
+            h('option', { value: 'ark' }, dict.kindArk)
+          ))
+        ),
+        h(
+          'div',
+          { className: PREFIX + 'grid' },
+          h(Field, { label: dict.baseURL, hint: dict.baseURLHint }, h(TextInput, {
+            mono: true,
+            value: draft.baseURL,
+            placeholder: 'https://api.example.com/v1',
+            onChange: (value) => setDraft({ ...draft, baseURL: value })
+          })),
+          h(Field, { label: dict.model }, h(TextInput, {
+            mono: true,
+            value: draft.model,
+            placeholder: 'model-id',
+            onChange: (value) => setDraft({ ...draft, model: value })
+          }))
+        ),
+        h(
+          'div',
+          { className: PREFIX + 'grid' },
+          h(Field, { label: dict.apiKeyEnv, hint: dict.apiKeyEnvHint }, h(TextInput, {
+            mono: true,
+            value: draft.apiKeyEnv,
+            placeholder: 'MY_API_KEY',
+            onChange: (value) => setDraft({ ...draft, apiKeyEnv: value })
+          })),
+          h(Field, { label: dict.keySave }, h(SecretInput, {
+            value: draft.key,
+            placeholder: dict.keyPlaceholder,
+            onChange: (value) => setDraft({ ...draft, key: value })
+          }))
+        ),
+        h(
+          'div',
+          { className: PREFIX + 'grid' },
+          h(Field, { label: dict.authPrefix, hint: dict.authPrefixHint }, h(TextInput, {
+            mono: true,
+            value: draft.authPrefix,
+            placeholder: 'Bearer ',
+            onChange: (value) => setDraft({ ...draft, authPrefix: value })
+          }))
+        ),
+        h(
+          'div',
+          { className: PREFIX + 'row' },
+          h(
+            'label',
+            { className: PREFIX + 'check' },
+            h('input', {
+              type: 'checkbox',
+              checked: draft.stripQuality === true,
+              onChange: (event) => setDraft({ ...draft, stripQuality: event.target.checked })
+            }),
+            dict.stripQuality
+          ),
+          h(
+            'label',
+            { className: PREFIX + 'check' },
+            h('input', {
+              type: 'checkbox',
+              checked: draft.watermark === true,
+              onChange: (event) => setDraft({ ...draft, watermark: event.target.checked })
+            }),
+            dict.watermark
+          )
+        ),
+        h(
+          'div',
+          { className: PREFIX + 'row' },
+          h(Btn, { primary: true, disabled: busy, onClick: submit }, dict.save),
+          h(
+            Btn,
+            {
+              disabled: busy,
+              onClick: () => {
+                setOpen(false)
+                setDraft(BLANK)
+              }
+            },
+            dict.cancel
+          )
+        )
+      )
+    }
+
+    /* ---------------------------------------------------------------- *
+     * 设置页
+     * ---------------------------------------------------------------- */
+
+    function SettingsPage() {
+      const dict = useMemo(pickDict, [])
+      const [state, setState] = useState(null)
+      const [error, setError] = useState('')
+      const [loading, setLoading] = useState(true)
+      const [toast, setToast] = useState('')
+      const toastTimer = useRef(null)
+
+      const showToast = useCallback((message) => {
+        setToast(message)
+        if (toastTimer.current) clearTimeout(toastTimer.current)
+        toastTimer.current = setTimeout(() => setToast(''), 2600)
+      }, [])
+
+      const load = useCallback(async () => {
+        setLoading(true)
+        try {
+          setState(await call('/state'))
+          setError('')
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : String(cause))
+        } finally {
+          setLoading(false)
+        }
+      }, [])
+
+      useEffect(() => {
+        injectStyles()
+        load()
+        return () => {
+          if (toastTimer.current) clearTimeout(toastTimer.current)
+        }
+      }, [load])
+
+      const [syncing, setSyncing] = useState(false)
+
+      const syncModels = useCallback(async () => {
+        setSyncing(true)
+        try {
+          const next = await post('/sync', {})
+          setState(next)
+          const models = next?.models
+          if (models && models.ok === false) {
+            setError(`${dict.syncModels}：${models.error ?? '\u672a\u77e5\u539f\u56e0'}`)
+          } else {
+            const added = models?.added?.length ?? 0
+            const removed = models?.removed?.length ?? 0
+            showToast(`${dict.syncOk} (+${added} / -${removed})`)
+            setError('')
+          }
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : String(cause))
+        } finally {
+          setSyncing(false)
+        }
+      }, [dict, showToast])
+
+      const active = state?.backends?.find((item) => item.isActive)
+
+      return h(
+        'div',
+        { className: PREFIX + 'wrap' },
+        h(
+          'div',
+          { className: PREFIX + 'head' },
+          h('h1', { className: PREFIX + 'h1', style: { color: C.text } }, dict.title),
+          h('div', { className: PREFIX + 'sub', style: { color: C.secondary } }, dict.subtitle)
+        ),
+
+        h(
+          'div',
+          { className: PREFIX + 'bar', style: { background: C.panel } },
+          h(
+            'div',
+            { className: PREFIX + 'kv' },
+            h('span', { style: { color: C.caption } }, dict.current),
+            h('span', { style: { color: C.text }, className: PREFIX + 'mono' },
+              active ? `${active.label}（${active.modelRef}）` : '—')
+          ),
+          h(
+            'div',
+            { className: PREFIX + 'kv' },
+            h('span', { style: { color: C.caption } }, dict.endpoint),
+            h('span', { style: { color: C.secondary }, className: PREFIX + 'mono' }, 'http://127.0.0.1:1236/v1')
+          ),
+          h('div', { className: PREFIX + 'grow' }),
+          h(Btn, { onClick: syncModels, disabled: syncing || loading }, syncing ? dict.syncing : dict.syncModels),
+          h(Btn, { onClick: load, disabled: loading }, loading ? dict.loading : dict.refresh),
+          toast ? h('span', { className: PREFIX + 'ok' }, toast) : null
+        ),
+
+        error
+          ? h(
+              'div',
+              { className: PREFIX + 'err', style: { padding: '8px 0' } },
+              `${dict.loadFailed}：${error}`,
+              ' ',
+              h(Btn, { onClick: load }, dict.retry)
+            )
+          : null,
+
+        !state && loading
+          ? h('div', { style: { color: C.caption, fontSize: 13 } }, dict.loading)
+          : null,
+
+        state && state.backends.length === 0
+          ? h('div', { style: { color: C.caption, fontSize: 13 } }, dict.empty)
+          : null,
+
+        state
+          ? state.backends.map((backend) =>
+              h(BackendCard, {
+                key: backend.name,
+                backend,
+                dict,
+                onChanged: async () => {
+                  await load()
+                  showToast(dict.saved)
+                },
+                onError: (message) => setError(message)
+              })
+            )
+          : null,
+
+        state ? h(AddBackend, { dict, onChanged: load, onError: setError }) : null,
+
+        h(
+          'div',
+          { className: PREFIX + 'hint', style: { color: C.secondary } },
+          h('div', { style: { fontWeight: 600, marginBottom: 4, color: C.text } }, dict.hintTitle),
+          h('div', null, dict.hintBody)
+        )
+      )
+    }
+
+    /* ---------------------------------------------------------------- *
+     * 注册
+     * ---------------------------------------------------------------- */
+
+    function apply(ctx) {
+      const register = () => {
+        ctx.slots.register(
+          {
+            name: 'settings.section',
+            id: PANEL_ID,
+            order: 26,
+            label: () => pickDict().nav
+          },
+          SettingsPage
+        )
+      }
+      // slots 可能比本插件晚就绪
+      ctx.effect(() => ctx.slots.inject('settings.section', register), 'image-switch: settings section')
+    }
+
+    return { name: PANEL_ID, inject: ['slots'], apply }
+  }
+})
