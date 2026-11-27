@@ -36,10 +36,10 @@
         "zh": "生图路由"
       },
       "description": {
-        "en": "Choose which backend generate_image talks to, and keep a key per backend. Ships with local Stable Diffusion (127.0.0.1:1235), Volcengine Ark / Doubao Seedream, AutoDL.Art and any OpenAI-compatible /images/generations service; add, edit or remove backends yourself. Open Settings → Image routing (right after Models) and press \"Set default\" on a backend — that choice is pushed into dsh-model-think-level, so later generate_image calls need no model argument. \"Test\" spends one real generation on the selected backend (local is free, cloud calls are billed by that provider). Keys are stored in ~/.dsh/image-switch/keys.json (mode 600) and never written into the profile config; when no key is saved the plugin falls back to the backend's env var or the ~/.dsh/.credentials.yaml refs. Turning the bundle off removes the Settings page and the image_router tool, and the standalone endpoint on port 1236 stops listening, so generate_image falls back to whatever provider rows the profile still declares.",
-        "zh": "决定 generate_image 走哪个后端，并给每个后端单独存密钥。内置本地 Stable Diffusion（127.0.0.1:1235）、火山方舟豆包 Seedream、AutoDL.Art，以及任意 OpenAI 兼容的 /images/generations 服务；后端可以自己加、改、删。打开「设置 → 生图路由」（紧跟在「模型」后面），在某个后端上点「设为默认」——这个选择会同步写进 dsh-model-think-level，之后调用 generate_image 不用再写 model。「测试」会在该后端上真跑一张（本地免费，云端按各家计费）。密钥存在 ~/.dsh/image-switch/keys.json（权限 600），不写进 profile 配置；没存密钥时依次回退到后端的密钥变量名和 ~/.dsh/.credentials.yaml 的 refs。关掉这个 bundle 会移除设置页和 image_router 工具，1236 上的独立端点也会停止监听，generate_image 回到 profile 里仍然声明的那些 provider 行。"
+        "en": "Choose which backend generate_image talks to, and keep a key per backend. Ships with local Stable Diffusion, Volcengine Ark / Doubao Seedream, AutoDL.Art, OpenAI-compatible /images/generations services, and async video models such as SCNet MiniMax-H3, which this plugin submits as a task, polls, downloads the mp4 for, and turns into PNG frames so it still answers the image call. Add, edit or remove backends yourself. Open Settings, Image routing (right after Models), and press \"Set default\" on a backend: that choice is pushed into dsh-model-think-level, so later generate_image calls need no model argument. \"Test\" checks the selected backend; for video backends it verifies the key and endpoint only, because a real clip takes minutes and spends quota. Keys are stored in ~/.dsh/image-switch/keys.json (mode 600) and never written into the profile config; when no key is saved the plugin falls back to the backend env var or the ~/.dsh/.credentials.yaml refs. Frames are grabbed with ffmpeg or Pillow, and the downloaded mp4 is kept in ~/.dsh/image-switch/videos/. Turning the bundle off removes the Settings page and the image_router tool, and the standalone endpoint on port 17891 stops listening.",
+        "zh": "决定 generate_image 走哪个后端，并给每个后端单独存密钥。内置本地 Stable Diffusion、火山方舟豆包 Seedream、AutoDL.Art、任意 OpenAI 兼容的 /images/generations 服务，以及 SCNet MiniMax-H3 这类异步视频模型 —— 视频后端由插件提交任务、轮询、下载 mp4，再抽帧成 PNG 交给原本要吃图的那条链路。后端可以自己加、改、删。打开「设置 → 生图路由」（紧跟在「模型」后面），在某个后端上点「设为默认」——这个选择会同步写进 dsh-model-think-level，之后调用 generate_image 不用再写 model。「测试」会检查所选后端；视频后端只验密钥和端点，因为真跑一条片子要几分钟还吃配额。密钥存在 ~/.dsh/image-switch/keys.json（权限 600），不写进 profile 配置；没存密钥时依次回退到后端的密钥变量名和 ~/.dsh/.credentials.yaml 的 refs。抽帧用 ffmpeg 或 Pillow，下载到的 mp4 留在 ~/.dsh/image-switch/videos/。关掉这个 bundle 会移除设置页和 image_router 工具，17891 上的独立端点也会停止监听。"
       },
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNiIgaGVpZ2h0PSIzNiIgdmlld0JveD0iMCAwIDM2IDM2IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkltYWdlIHN3aXRjaCI+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjQ3YmJmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cmVjdCB4PSI1IiB5PSI4IiB3aWR0aD0iMTciIGhlaWdodD0iMTUiIHJ4PSIzLjIiLz4KICAgIDxjaXJjbGUgY3g9IjEwLjIiIGN5PSIxMi44IiByPSIxLjUiLz4KICAgIDxwYXRoIGQ9Ik01LjggMjAuNmw0LjktNC45IDMuMSAzLjEgMS45LTEuOSA0LjUgNC41Ii8+CiAgPC9nPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI0N2JiZiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPHBhdGggZD0iTTI0LjYgMTIuN2g2LjYiLz4KICAgIDxwYXRoIGQ9Ik0yOC43IDEwLjJsMi41IDIuNS0yLjUgMi41Ii8+CiAgICA8cGF0aCBkPSJNMzEuMiAyMy4zaC02LjYiLz4KICAgIDxwYXRoIGQ9Ik0yNy4xIDIwLjhsLTIuNSAyLjUgMi41IDIuNSIvPgogIDwvZz4KPC9zdmc+Cg==",
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNiIgaGVpZ2h0PSIzNiIgdmlld0JveD0iMCAwIDM2IDM2IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkltYWdlIHN3aXRjaCI+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjQ3YmJmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cmVjdCB4PSIzIiB5PSI3IiB3aWR0aD0iMTYiIGhlaWdodD0iMTQiIHJ4PSIzIi8+CiAgICA8Y2lyY2xlIGN4PSI4IiBjeT0iMTEuNiIgcj0iMS40Ii8+CiAgICA8cGF0aCBkPSJNMy44IDE4LjZsNC42LTQuNiAyLjkgMi45IDEuOC0xLjggNC4yIDQuMiIvPgogIDwvZz4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiMyNDdiYmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxyZWN0IHg9IjIwIiB5PSIxNSIgd2lkdGg9IjEzIiBoZWlnaHQ9IjEzIiByeD0iMi42Ii8+CiAgICA8cGF0aCBkPSJNMjQuMiAxOS40djQuNmwzLjYtMi4zeiIgZmlsbD0iIzI0N2JiZiIgc3Ryb2tlPSJub25lIi8+CiAgPC9nPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzdiOGI5ZiIgc3Ryb2tlLXdpZHRoPSIxLjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cGF0aCBkPSJNMjMuNiA1LjRoNi4yIi8+CiAgICA8cGF0aCBkPSJNMjcuNiAzLjJsMi4yIDIuMi0yLjIgMi4yIi8+CiAgPC9nPgo8L3N2Zz4K",
       "author": "dsh-image-switch contributors",
       "metadata": {
         "category": "image",
@@ -49,9 +49,12 @@
           "dsh-plugin",
           "image-generation",
           "text-to-image",
+          "text-to-video",
           "stable-diffusion",
           "doubao",
           "seedream",
+          "minimax",
+          "scnet",
           "openai-compatible"
         ],
         "labels": [],
@@ -61,12 +64,12 @@
       },
       "versions": [
         {
-          "version": "1.0.2",
-          "publishTimestamp": 1795520785,
+          "version": "1.1.0",
+          "publishTimestamp": 1795790560,
           "source": {
             "type": "git",
-            "url": "https://github.com/mgx1995/dsh-image-switch-market",
-            "commit": "fcbc93884569be219296fb8f38d71f3c008c6fd8"
+            "url": "https://github.com/mgx1995/dsh-image-switch",
+            "commit": "c1596d8d0d2cd8bf8f3e353770f772a5d4f0a57b"
           },
           "engines": {
             "node": ">=20"
@@ -74,9 +77,9 @@
         }
       ],
       "repository": {
-        "url": "https://github.com/mgx1995/dsh-image-switch-market"
+        "url": "https://github.com/mgx1995/dsh-image-switch"
       },
-      "homepage": "https://mgx1995.github.io/dsh-image-switch-market/"
+      "homepage": "https://github.com/mgx1995/dsh-image-switch"
     }
   ]
 }
